@@ -21,6 +21,7 @@ class NFOSchema(Schema):
     profit = fields.Float()
 
     # option specific field
+    strike = fields.Integer()
     option_type = fields.String()
 
     # strategy details

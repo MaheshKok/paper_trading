@@ -18,7 +18,8 @@ class NFO(db.Model):
     profit = db.Column(db.Integer, nullable=True)
 
     # option specific field
-    option_type = db.Column(db.String, nullable=False)
+    strike = db.Column(db.Integer, nullable=True)
+    option_type = db.Column(db.String, nullable=True)
 
     # strategy details
     strategy = db.Column(db.String, nullable=False)
