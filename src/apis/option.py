@@ -2,12 +2,12 @@
 import logging
 from datetime import datetime
 
-import nsepython
 from flask_rest_jsonapi import ResourceDetail
 from flask_rest_jsonapi import ResourceList
 from flask_rest_jsonapi.exceptions import ObjectNotFound
 from sqlalchemy.orm.exc import NoResultFound
 
+from apis.constants import fetch_data
 from extensions import db
 from models.option import Option
 from schema.option import OptionSchema
@@ -16,6 +16,7 @@ log = logging.getLogger(__file__)
 
 
 class OptionDetail(ResourceDetail):
+    # ignore below code its dummy
     def before_get_object(self, view_kwargs):
         if view_kwargs.get("computer_id") is not None:
             try:
@@ -45,40 +46,78 @@ class OptionDetail(ResourceDetail):
 
 class OptionList(ResourceList):
     def before_post(self, args, kwargs, data=None):
+        last_trade_list = (
+            Option.query.filter_by(strategy=data["strategy"])
+            .order_by(Option.order_placed_at.desc())
+            .all()
+        )
+        # TODO fetch expiry from nse lib
+        res = fetch_data(data["symbol"])
+        data_lst = res.json()["OptionChainInfo"]
+        strike_price = data.get("strike_price")
+        strike = data.get("strike")
+        action = data["action"]
+        call_put = "ce" if f"{action}" == "buy" else "pe"
+        last_trade = False
 
-        if data["option_type"] == "PE":
+        if last_trade_list:
+            last_trade = last_trade_list[0]
+            last_trade_call_put = "ce" if last_trade.option_type == "buy" else "pe"
 
-            last_trade_list = Option.query.order_by(Option.created_at.desc()).all()
-            if last_trade_list:
-                last_trade = last_trade_list[0]
-                exit_price = nsepython.nse_quote_ltp(
-                    "BANKNIFTY", "24-Jun-2021", "CE", 34500
-                )
-                last_trade.profit = exit_price - last_trade.buy_price
-                last_trade.exit_price = exit_price
-                last_trade.updated_at = datetime.now()
-                db.session.add(last_trade)
-                db.session.commit()
+        if strike:
+            for option_data in data_lst:
+                if option_data["strike"] == strike:
+                    data["buy_price"] = option_data[f"{call_put}ltp"]
+                    break
+                if last_trade and option_data["strike"] == last_trade.strike:
+                    exit_price = option_data[f"{last_trade_call_put}ltp"]
 
-            data["buy_price"] = nsepython.nse_quote_ltp(
-                "BANKNIFTY", "24-Jun-2021", "PE", 34500
-            )
+        elif strike_price:
+            for option_data in data_lst:
+                ltp = int(option_data[f"{call_put}ltp"])
+                diff = ltp - int(data["strike_price"])
+                if diff > -50:
+                    data["buy_price"] = option_data[f"{call_put}ltp"]
+                    data["strike"] = option_data["strike"]
+                    break
+                if last_trade and data["strike"] == last_trade.strike:
+                    exit_price = data[f"{last_trade_call_put}ltp"]
+
         else:
-            last_trade_list = Option.query.order_by(Option.created_at.desc()).all()
-            if last_trade_list:
-                last_trade = last_trade_list[0]
-                exit_price = nsepython.nse_quote_ltp(
-                    "BANKNIFTY", "24-Jun-2021", "PE", 34500
-                )
-                last_trade.exit_price = exit_price
-                last_trade.profit = exit_price - last_trade.buy_price
-                last_trade.updated_at = datetime.now()
-                db.session.add(last_trade)
-                db.session.commit()
+            for option_data in data_lst:
+                if option_data[f"{call_put}status"] == "ATM":
+                    data["buy_price"] = option_data[f"{call_put}ltp"]
+                    data["strike"] = option_data["strike"]
+                    break
+                if last_trade and option_data["strike"] == last_trade.strike:
+                    exit_price = option_data[f"{last_trade_call_put}ltp"]
 
-            data["buy_price"] = nsepython.nse_quote_ltp(
-                "BANKNIFTY", "24-Jun-2021", "CE", 34500
-            )
+        if last_trade_list:
+            last_trade.profit = exit_price - last_trade.buy_price
+            last_trade.exit_price = exit_price
+            last_trade.updated_at = datetime.now()
+
+            db.session.add(last_trade)
+            db.session.commit()
+
+        # if data["option_type"] == "PE":
+        #     pass
+        # else:
+        #     last_trade_list = Option.query.order_by(Option.created_at.desc()).all()
+        #     if last_trade_list:
+        #         last_trade = last_trade_list[0]
+        #         exit_price = nsepython.nse_quote_ltp(
+        #             "BANKNIFTY", "24-Jun-2021", "PE", 34500
+        #         )
+        #         last_trade.exit_price = exit_price
+        #         last_trade.profit = exit_price - last_trade.buy_price
+        #         last_trade.updated_at = datetime.now()
+        #         db.session.add(last_trade)
+        #         db.session.commit()
+        #
+        #     data["buy_price"] = nsepython.nse_quote_ltp(
+        #         "BANKNIFTY", "24-Jun-2021", "CE", 34500
+        #     )
 
     schema = OptionSchema
     data_layer = {
