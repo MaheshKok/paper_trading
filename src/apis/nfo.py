@@ -126,14 +126,3 @@ class NFOList(ResourceList):
         "session": db.session,
         "model": NFO,
     }
-
-
-# Expected Payload
-{
-    "strategy": 1,  # mandatory
-    "nfo_type": "option",  # mandatory for now
-    "option_type": "ce",   # mandatory for now
-    "action": "buy",       # mandatory
-    "strike_price": 550,  # if not provided ATM strike price will be picked
-    "symbol": "BANKNIFTY",  # its optional,
-}
