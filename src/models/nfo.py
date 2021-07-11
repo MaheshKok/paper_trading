@@ -4,20 +4,26 @@ from datetime import datetime
 from extensions import db
 
 
-class Option(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+class NFO(db.Model):
+    __tablename__ = "nfo"
 
-    # basic detail
+    id = db.Column(db.Integer, primary_key=True)
+    nfo_type = db.Column(db.String, nullable=False)
+
+    # order detail
+    action = db.Column(db.String, nullable=False, server_default="buy")
     quantity = db.Column(db.Integer, default=25)
-    buy_price = db.Column(db.Float, nullable=False)
+    entry_price = db.Column(db.Float, nullable=False)
     exit_price = db.Column(db.Float, nullable=True)
     profit = db.Column(db.Integer, nullable=True)
 
+    # option specific field
     option_type = db.Column(db.String, nullable=False)
-    action = db.Column(db.String, nullable=False, server_default="buy")
 
+    # strategy details
     strategy = db.Column(db.String, nullable=False)
 
+    # execution details
     order_placed_at = db.Column(
         db.TIMESTAMP(timezone=True), nullable=False, default=datetime.now()
     )

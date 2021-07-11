@@ -3,10 +3,8 @@ from flask import app
 from flask import jsonify
 from flask_rest_jsonapi import Api
 
-from apis.future import FutureDetail
-from apis.future import FutureList
-from apis.option import OptionDetail
-from apis.option import OptionList
+from apis.nfo import NFODetail
+from apis.nfo import NFOList
 
 
 def register_base_routes(app):
@@ -18,7 +16,5 @@ def register_base_routes(app):
 
 def register_json_routes(app):
     api = Api(app)
-    api.route(OptionList, "option_list", "/app/options")
-    api.route(OptionDetail, "option_detail", "/app/options/<int:id>")
-    api.route(FutureList, "future_list", "/app/futures")
-    api.route(FutureDetail, "future_detail", "/app/futures/<int:id>")
+    api.route(NFOList, "nfo_list", "/api/nfo")
+    api.route(NFODetail, "nfo_detail", "/api/nfo/<int:id>")
