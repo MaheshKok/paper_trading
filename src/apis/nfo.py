@@ -94,7 +94,7 @@ class NFOList(ResourceList):
                         exit_price = option_data[f"{last_trade_call_put}ltp"]
 
             if last_trade_list:
-                last_trade.profit = exit_price - last_trade.entry_price
+                last_trade.profit = (exit_price - last_trade.entry_price) * 25
                 last_trade.exit_price = exit_price
                 last_trade.updated_at = datetime.now()
 
