@@ -18,13 +18,19 @@ def register_json_routes(app):
     api = Api(app)
 
     # Expected Payload
+
     {
-        "strategy": 1,  # mandatory
-        "nfo_type": "option",  # mandatory for now
-        "option_type": "ce",  # mandatory for now
-        "action": "buy",  # mandatory
-        "strike_price": 550,  # if not provided ATM strike price will be picked
-        "symbol": "BANKNIFTY",  # its optional,
+        "data": {
+            "type": "option",
+            "attributes": {
+                "strategy": 1,  # mandatory
+                "nfo_type": "option",  # mandatory for now
+                "option_type": "ce",
+                "action": "buy",  # mandatory
+                "strike_price": 550,  # if not provided ATM strike price will be picked
+                "symbol": "BANKNIFTY",  # its optional,
+            },
+        }
     }
 
     api.route(NFOList, "nfo_list", "/api/nfo")

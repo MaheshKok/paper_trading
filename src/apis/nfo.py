@@ -57,9 +57,12 @@ class NFOList(ResourceList):
             data_lst = res.json()["OptionChainInfo"]
             strike_price = data.get("strike_price")
             strike = data.get("strike")
-            option_type = data["option_type"]
-            last_trade = False
+            if not data.get("option_type"):
+                option_type = "ce" if data["action"] == "buy" else "pe"
+            else:
+                option_type = data["option_type"]
 
+            last_trade = False
             if last_trade_list:
                 last_trade = last_trade_list[0]
                 last_trade_call_put = "ce" if last_trade.option_type == "buy" else "pe"
