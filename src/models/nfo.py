@@ -13,19 +13,22 @@ class NFO(db.Model):
     # order detail
     action = db.Column(db.String, nullable=False, server_default="buy")
     quantity = db.Column(db.Integer, default=25)
-    entry_price = db.Column(db.Float, nullable=False)
-    exit_price = db.Column(db.Float, nullable=True)
+    entry_price = db.Column(db.DECIMAL, nullable=False)
+    exit_price = db.Column(db.DECIMAL, nullable=True)
     profit = db.Column(db.Integer, nullable=True)
 
     # option specific field
     strike = db.Column(db.Integer, nullable=True)
     option_type = db.Column(db.String, nullable=True)
 
+    # future specifi field
+    future_price = db.Column(db.DECIMAL, nullable=True)
+
     # strategy details
     strategy = db.Column(db.String, nullable=False)
 
     # execution details
-    order_placed_at = db.Column(
+    placed_at = db.Column(
         db.TIMESTAMP(timezone=True), nullable=False, default=datetime.now()
     )
-    order_exited_at = db.Column(db.TIMESTAMP(timezone=True), nullable=True)
+    exited_at = db.Column(db.TIMESTAMP(timezone=True), nullable=True)

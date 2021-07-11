@@ -18,7 +18,6 @@ def register_json_routes(app):
     api = Api(app)
 
     # Expected Payload
-
     {
         "data": {
             "type": "option",
