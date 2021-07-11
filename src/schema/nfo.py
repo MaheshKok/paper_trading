@@ -16,16 +16,16 @@ class NFOSchema(Schema):
     # order detail
     action = fields.String()
     quantity = fields.Integer()
-    entry_price = fields.Decimal()
-    exit_price = fields.Decimal()
-    profit = fields.Decimal()
+    entry_price = fields.Float()
+    exit_price = fields.Float()
+    profit = fields.Float()
 
     # option specific field
     strike = fields.Integer()
     option_type = fields.String()
 
     # future specific
-    future_price = fields.Decimal()
+    future_price = fields.Float()
 
     # strategy details
     strategy = fields.Integer()
