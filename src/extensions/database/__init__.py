@@ -11,3 +11,4 @@ def register_db(app):
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_recycle": 1800}
         extensions.db.init_app(app)
         extensions.db.create_all()
+

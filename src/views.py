@@ -1,10 +1,45 @@
 # Create endpoints
+import datetime
+import json
+import time
+
+import schedule
 from flask import app
 from flask import jsonify
 from flask_rest_jsonapi import Api
 
 from apis.nfo import NFODetail
 from apis.nfo import NFOList
+from apis.constants import fetch_data
+from models.option_chain import OptionChain
+from extensions import db
+
+
+def update_option_chain():
+    print(f"dumping option chain at: {datetime.datetime.now().time()}")
+    res = fetch_data(symbol="NIFTY")
+    data_lst = res.json()["OptionChainInfo"]
+
+    valid_columns = OptionChain.__table__.c.keys()
+    valid_columns.remove("date")
+    mappings = []
+
+    for option_chain_data in json.loads(data_lst):
+        mappings.append(
+            {
+                column: option_chain_data[column] if option_chain_data[column] else None
+                for column in option_chain_data
+                if column in valid_columns
+            }
+        )
+
+    option_chain_db_data_list = OptionChain.query.all()
+    if option_chain_db_data_list:
+        db.session.bulk_update_mappings(OptionChain, mappings)
+    else:
+        db.session.bulk_insert_mappings(OptionChain, mappings)
+
+    db.session.commit()
 
 
 def register_base_routes(app):
@@ -12,6 +47,13 @@ def register_base_routes(app):
     def index():
         response = "Hello from a public endpoint! You don't need to be authenticated to see this."
         return jsonify(message=response)
+
+    @app.route("/api/schedule/dump_option_chain")
+    def dump_option_chain():
+        schedule.every(5).seconds.do(update_option_chain)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
 
 
 def register_json_routes(app):

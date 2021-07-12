@@ -21,7 +21,7 @@ class NFO(db.Model):
     strike = db.Column(db.Integer, nullable=True)
     option_type = db.Column(db.String, nullable=True)
 
-    # future specifi field
+    # future specific field
     future_price = db.Column(db.Float, nullable=True)
 
     # strategy details
