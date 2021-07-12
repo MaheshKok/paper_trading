@@ -1,4 +1,5 @@
 # Create resource managers
+import json
 import logging
 from datetime import datetime
 
@@ -52,7 +53,7 @@ class NFOList(ResourceList):
             ).all()
             # TODO fetch expiry from nse lib
             res = fetch_data(data["symbol"])
-            data_lst = res.json()["OptionChainInfo"]
+            data_lst = json.loads(res.json()["OptionChainInfo"])
             strike_price = data.get("strike_price")
             strike = data.get("strike")
             if not data.get("option_type"):
@@ -85,15 +86,19 @@ class NFOList(ResourceList):
                         exit_price = option_data[f"{option_last_trade_call_put}ltp"]
             elif strike_price:
                 for option_data in data_lst:
-                    ltp = int(option_data[f"{option_type}ltp"])
+                    if isinstance(option_data[f"{option_type}ltp"], float):
+                        ltp = int(option_data[f"{option_type}ltp"])
+                    else:
+                        ltp = 0
+
                     diff = ltp - int(data["strike_price"])
                     if diff > -50:
-                        data["entry_price"] = option_data[f"{option_type}ltp"]
+                        data["entry_price"] = ltp
                         data["strike"] = option_data["strike"]
                         del data["strike_price"]
                         break
-                    if option_last_trade and data["strike"] == option_last_trade.strike:
-                        exit_price = data[f"{option_last_trade_call_put}ltp"]
+                    if option_last_trade and option_data["strike"] == option_last_trade.strike:
+                        exit_price = option_data[f"{option_last_trade_call_put}ltp"]
             else:
                 for option_data in data_lst:
                     if option_data[f"{option_type}status"] == "ATM":

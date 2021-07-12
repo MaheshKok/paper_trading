@@ -17,27 +17,37 @@ from extensions import db
 
 def update_option_chain():
     print(f"dumping option chain at: {datetime.datetime.now().time()}")
-    res = fetch_data(symbol="NIFTY")
+    res = fetch_data(symbol="BANKNIFTY")
     data_lst = res.json()["OptionChainInfo"]
 
     valid_columns = OptionChain.__table__.c.keys()
     valid_columns.remove("date")
-    mappings = []
+    option_chain_db_id_list = [r[0] for r in OptionChain.query.with_entities(OptionChain.id).all()]
 
+    update_mappings = []
+    insert_mappings = []
     for option_chain_data in json.loads(data_lst):
-        mappings.append(
-            {
-                column: option_chain_data[column] if option_chain_data[column] else None
-                for column in option_chain_data
-                if column in valid_columns
-            }
-        )
+        if int(option_chain_data["id"]) in option_chain_db_id_list:
+            update_mappings.append(
+                {
+                    column: option_chain_data[column] if option_chain_data[column] else None
+                    for column in option_chain_data
+                    if column in valid_columns
+                }
+            )
+        else:
+            insert_mappings.append(
+                {
+                    column: option_chain_data[column] if option_chain_data[column] else None
+                    for column in option_chain_data
+                    if column in valid_columns
+                }
+            )
 
-    option_chain_db_data_list = OptionChain.query.all()
-    if option_chain_db_data_list:
-        db.session.bulk_update_mappings(OptionChain, mappings)
-    else:
-        db.session.bulk_insert_mappings(OptionChain, mappings)
+    db.session.bulk_update_mappings(OptionChain, update_mappings)
+
+    if insert_mappings:
+        db.session.bulk_insert_mappings(OptionChain, insert_mappings)
 
     db.session.commit()
 
@@ -50,10 +60,12 @@ def register_base_routes(app):
 
     @app.route("/api/schedule/dump_option_chain")
     def dump_option_chain():
-        schedule.every(5).seconds.do(update_option_chain)
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+        update_option_chain()
+        return ""
+        # schedule.every(60).seconds.do(update_option_chain)
+        # while True:
+        #     schedule.run_pending()
+        #     time.sleep(1)
 
 
 def register_json_routes(app):

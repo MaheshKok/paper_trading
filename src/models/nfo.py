@@ -25,7 +25,8 @@ class NFO(db.Model):
     future_price = db.Column(db.Float, nullable=True)
 
     # strategy details
-    strategy = db.Column(db.String, nullable=False)
+    strategy = db.Column(db.Integer, nullable=False)
+    symbol = db.Column(db.String, nullable=False)
 
     # execution details
     placed_at = db.Column(
