@@ -18,7 +18,7 @@ from extensions import db
 def update_option_chain():
     print(f"dumping option chain at: {datetime.datetime.now().time()}")
     res = fetch_data(symbol="BANKNIFTY")
-    data_lst = res.json()["OptionChainInfo"]
+    binary_data_lst = res.json()["OptionChainInfo"]
 
     valid_columns = OptionChain.__table__.c.keys()
     valid_columns.remove("date")
@@ -26,7 +26,8 @@ def update_option_chain():
 
     update_mappings = []
     insert_mappings = []
-    for option_chain_data in json.loads(data_lst):
+    data_lst = json.loads(binary_data_lst)
+    for option_chain_data in data_lst:
         if int(option_chain_data["id"]) in option_chain_db_id_list:
             update_mappings.append(
                 {
@@ -60,12 +61,10 @@ def register_base_routes(app):
 
     @app.route("/api/schedule/dump_option_chain")
     def dump_option_chain():
-        update_option_chain()
-        return ""
-        # schedule.every(60).seconds.do(update_option_chain)
-        # while True:
-        #     schedule.run_pending()
-        #     time.sleep(1)
+        schedule.every(15).seconds.do(update_option_chain)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
 
 
 def register_json_routes(app):

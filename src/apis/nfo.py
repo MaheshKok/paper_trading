@@ -3,10 +3,16 @@ import json
 import logging
 from datetime import datetime
 
+from flask import request
 from flask_rest_jsonapi import ResourceDetail
 from flask_rest_jsonapi import ResourceList
+from flask_rest_jsonapi.decorators import check_method_requirements
 from flask_rest_jsonapi.exceptions import ObjectNotFound
+from flask_rest_jsonapi.schema import compute_schema
+from marshmallow import ValidationError
+from marshmallow_jsonapi.exceptions import IncorrectTypeError
 from sqlalchemy.orm.exc import NoResultFound
+from flask_rest_jsonapi.querystring import QueryStringManager as QSManager
 
 from apis.constants import fetch_data
 from extensions import db
@@ -46,6 +52,54 @@ class NFODetail(ResourceDetail):
 
 
 class NFOList(ResourceList):
+    @check_method_requirements
+    def post(self, *args, **kwargs):
+        """Create an object"""
+        json_data = request.get_json() or {}
+
+        qs = QSManager(request.args, self.schema)
+
+        schema = compute_schema(self.schema,
+                                getattr(self, 'post_schema_kwargs', dict()),
+                                qs,
+                                qs.include)
+
+        try:
+            data, errors = schema.load(json_data)
+        except IncorrectTypeError as e:
+            errors = e.messages
+            for error in errors['errors']:
+                error['status'] = '409'
+                error['title'] = "Incorrect type"
+            return errors, 409
+        except ValidationError as e:
+            errors = e.messages
+            for message in errors['errors']:
+                message['status'] = '422'
+                message['title'] = "Validation error"
+            return errors, 422
+
+        if errors:
+            for error in errors['errors']:
+                error['status'] = "422"
+                error['title'] = "Validation error"
+            return errors, 422
+
+        self.before_post(args, kwargs, data=data)
+
+        obj = self.create_object(data, kwargs)
+
+        result = schema.dump(obj).data
+
+        if result['data'].get('links', {}).get('self'):
+            final_result = (result, 201, {'Location': result['data']['links']['self']})
+        else:
+            final_result = (result, 201)
+
+        result = self.after_post(final_result)
+
+        return result
+
     def before_post(self, args, kwargs, data=None):
         if data["nfo_type"] == "option":
             last_trade_list = NFO.query.filter_by(
