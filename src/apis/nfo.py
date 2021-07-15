@@ -1,6 +1,7 @@
 # Create resource managers
 import json
 import logging
+from copy import deepcopy
 from datetime import datetime
 
 from flask import request
@@ -87,9 +88,29 @@ class NFOList(ResourceList):
 
         self.before_post(args, kwargs, data=data)
 
-        obj = self.create_object(data, kwargs)
+        future_data = deepcopy(data)
+        # delete option specific data
+        del future_data["strike"]
+        # del future_data["option_type"]
+        future_data["nfo_type"] = "future"
+        future_data["entry_price"] = future_data["future_price"]
+        if future_data.get("strike_price"):
+            del future_data["strike_price"]
 
-        result = schema.dump(obj).data
+        # delete future specific data
+        del data["future_price"]
+        if data["action"] == "buy":
+            data["option_type"] = "ce"
+        else:
+            data["option_type"] = "pe"
+        data["nfo_type"] = "option"
+        if data.get("strike_price"):
+            del data["strike_price"]
+
+        option_obj = self.create_object(data, kwargs)
+        future_obj = self.create_object(future_data, kwargs)
+
+        result = schema.dump(option_obj).data
 
         if result['data'].get('links', {}).get('self'):
             final_result = (result, 201, {'Location': result['data']['links']['self']})
@@ -101,6 +122,7 @@ class NFOList(ResourceList):
         return result
 
     def before_post(self, args, kwargs, data=None):
+        # TODO create two object one for future another for option
         if data["nfo_type"] == "option":
             last_trade_list = NFO.query.filter_by(
                 strategy=data["strategy"], exited_at=None
@@ -124,10 +146,6 @@ class NFOList(ResourceList):
                     if last_trade.nfo_type == "future":
                         future_last_trade = last_trade
 
-                option_last_trade_call_put = (
-                    "ce" if option_last_trade.option_type == "buy" else "pe"
-                )
-
             if strike:
                 for option_data in data_lst:
                     if option_data["strike"] == strike:
@@ -137,8 +155,11 @@ class NFOList(ResourceList):
                         option_last_trade
                         and option_data["strike"] == option_last_trade.strike
                     ):
-                        exit_price = option_data[f"{option_last_trade_call_put}ltp"]
+                        exit_price = option_data[f"{option_last_trade.option_type}ltp"]
             elif strike_price:
+                exit_price_found = False if option_last_trade else True
+                entry_price_found = False
+
                 for option_data in data_lst:
                     if isinstance(option_data[f"{option_type}ltp"], float):
                         ltp = int(option_data[f"{option_type}ltp"])
@@ -146,13 +167,17 @@ class NFOList(ResourceList):
                         ltp = 0
 
                     diff = ltp - int(data["strike_price"])
-                    if diff > -50:
+                    if not entry_price_found and -50 < diff < 100:
                         data["entry_price"] = ltp
                         data["strike"] = option_data["strike"]
+                        entry_price_found = True
+                    if option_last_trade and option_data["strike"] == option_last_trade.strike:
+                        exit_price = option_data[f"{option_last_trade.option_type}ltp"]
+                        exit_price_found = True
+
+                    if exit_price_found and entry_price_found:
                         del data["strike_price"]
                         break
-                    if option_last_trade and option_data["strike"] == option_last_trade.strike:
-                        exit_price = option_data[f"{option_last_trade_call_put}ltp"]
             else:
                 for option_data in data_lst:
                     if option_data[f"{option_type}status"] == "ATM":
@@ -163,7 +188,7 @@ class NFOList(ResourceList):
                         option_last_trade
                         and option_data["strike"] == option_last_trade.strike
                     ):
-                        exit_price = option_data[f"{option_last_trade_call_put}ltp"]
+                        exit_price = option_data[f"{option_last_trade.option_type}ltp"]
 
             if option_last_trade:
                 option_last_trade.profit = (
@@ -176,7 +201,7 @@ class NFOList(ResourceList):
             if future_last_trade:
                 future_ltp = data["future_price"]
                 future_last_trade.exit_price = future_ltp
-                diff = (future_last_trade.entry_price - future_ltp) * 25
+                diff = (future_ltp - future_last_trade.entry_price) * 25
                 future_last_trade.profit = (
                     diff if future_last_trade.action == "buy" else -diff
                 )

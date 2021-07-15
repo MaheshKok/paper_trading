@@ -25,7 +25,7 @@ class NFOSchema(Schema):
     option_type = fields.String()
 
     # future specific
-    future_price = fields.Float()
+    future_price = fields.Float(load_only=True)
 
     # strategy details
     strategy = fields.Integer()
