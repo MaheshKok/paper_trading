@@ -60,30 +60,29 @@ class NFOList(ResourceList):
 
         qs = QSManager(request.args, self.schema)
 
-        schema = compute_schema(self.schema,
-                                getattr(self, 'post_schema_kwargs', dict()),
-                                qs,
-                                qs.include)
+        schema = compute_schema(
+            self.schema, getattr(self, "post_schema_kwargs", dict()), qs, qs.include
+        )
 
         try:
             data, errors = schema.load(json_data)
         except IncorrectTypeError as e:
             errors = e.messages
-            for error in errors['errors']:
-                error['status'] = '409'
-                error['title'] = "Incorrect type"
+            for error in errors["errors"]:
+                error["status"] = "409"
+                error["title"] = "Incorrect type"
             return errors, 409
         except ValidationError as e:
             errors = e.messages
-            for message in errors['errors']:
-                message['status'] = '422'
-                message['title'] = "Validation error"
+            for message in errors["errors"]:
+                message["status"] = "422"
+                message["title"] = "Validation error"
             return errors, 422
 
         if errors:
-            for error in errors['errors']:
-                error['status'] = "422"
-                error['title'] = "Validation error"
+            for error in errors["errors"]:
+                error["status"] = "422"
+                error["title"] = "Validation error"
             return errors, 422
 
         self.before_post(args, kwargs, data=data)
@@ -112,8 +111,8 @@ class NFOList(ResourceList):
 
         result = schema.dump(option_obj).data
 
-        if result['data'].get('links', {}).get('self'):
-            final_result = (result, 201, {'Location': result['data']['links']['self']})
+        if result["data"].get("links", {}).get("self"):
+            final_result = (result, 201, {"Location": result["data"]["links"]["self"]})
         else:
             final_result = (result, 201)
 
@@ -171,7 +170,10 @@ class NFOList(ResourceList):
                     data["entry_price"] = ltp
                     data["strike"] = option_data["strike"]
                     entry_price_found = True
-                if option_last_trade and option_data["strike"] == option_last_trade.strike:
+                if (
+                    option_last_trade
+                    and option_data["strike"] == option_last_trade.strike
+                ):
                     exit_price = option_data[f"{option_last_trade.option_type}ltp"]
                     exit_price_found = True
 
@@ -191,9 +193,7 @@ class NFOList(ResourceList):
                     exit_price = option_data[f"{option_last_trade.option_type}ltp"]
 
         if option_last_trade:
-            option_last_trade.profit = (
-                exit_price - option_last_trade.entry_price
-            ) * 25
+            option_last_trade.profit = (exit_price - option_last_trade.entry_price) * 25
             option_last_trade.exit_price = exit_price
             option_last_trade.exited_at = datetime.now()
             db.session.add(option_last_trade)
