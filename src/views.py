@@ -11,6 +11,7 @@ from flask_rest_jsonapi import Api
 from apis.nfo import NFODetail
 from apis.nfo import NFOList
 from apis.constants import fetch_data
+from apis.option_chain import OptionChainList, OptionChainDetail
 from models.option_chain import OptionChain
 from extensions import db
 
@@ -93,3 +94,6 @@ def register_json_routes(app):
 
     api.route(NFOList, "nfo_list", "/api/nfo")
     api.route(NFODetail, "nfo_detail", "/api/nfo/<int:id>")
+
+    api.route(OptionChainList, "option_chain_list", "/api/option_chain")
+    api.route(OptionChainDetail, "option_chain_detail", "/api/nfo/<int:id>")
