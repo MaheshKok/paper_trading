@@ -52,6 +52,33 @@ class NFODetail(ResourceDetail):
     }
 
 
+def buy_or_sell_future(self, data: dict):
+    last_trade = NFO.query.filter_by(
+        strategy=data["strategy"], exited_at=None, nfo_type="future"
+    ).scalar()
+
+    if last_trade:
+        future_ltp = data["future_price"]
+        exited_at = datetime.now()
+        profit = (future_ltp - last_trade.entry_price) * 25
+        if last_trade.action == "sell":
+            profit = - profit
+        last_trade.exit_price = future_ltp
+        last_trade.profit = profit
+        last_trade.exited_at = exited_at
+        db.session.commit()
+
+    data["entry_price"] = future_ltp
+    if data.get("strike_price"):
+        del data["strike_price"]
+
+    self.create_object(data, kwargs={})
+
+
+def buy_or_sell_option(data: dict):
+    pass
+
+
 class NFOList(ResourceList):
     @check_method_requirements
     def post(self, *args, **kwargs):
@@ -85,8 +112,16 @@ class NFOList(ResourceList):
                 error["title"] = "Validation error"
             return errors, 422
 
-        self.before_post(args, kwargs, data=data)
+        # if data.get("nfo_type") == "future":
+        #     buy_or_sell_future(data)
+        # elif data.get("nfo_type") == "option":
+        #     buy_or_sell_option(data)
+        # else:
+        #     buy_or_sell_future(data)
+        #     buy_or_sell_option(data)
 
+
+        self.before_post(args, kwargs, data=data)
         future_data = deepcopy(data)
         # delete option specific data
         del future_data["strike"]

@@ -17,7 +17,8 @@ from extensions import db
 
 
 def update_option_chain():
-    print(f"dumping option chain at: {datetime.datetime.now().time()}")
+    start_time = datetime.datetime.now()
+    print(f"dumping option chain at: {start_time}")
     res = fetch_data(symbol="BANKNIFTY")
     binary_data_lst = res.json()["OptionChainInfo"]
 
@@ -58,6 +59,7 @@ def update_option_chain():
         db.session.bulk_insert_mappings(OptionChain, insert_mappings)
 
     db.session.commit()
+    print(f"data dumped in: {(datetime.datetime.now() - start_time).seconds}")
 
 
 def register_base_routes(app):
